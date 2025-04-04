@@ -65,28 +65,44 @@ class VibeCodingApp:
         help_label.pack(pady=10)
     
     def initialize_vosk(self):
-        # Path to Vosk model - will download if not present
-        model_path = "vosk-model-small-en-us-0.15"
+        # Try multiple possible locations for the model
+        model_paths = []
+        model_name = "vosk-model-small-en-us-0.15"
         
-        # Check if model exists, if not, inform user to download
-        if not os.path.exists(model_path):
-            messagebox.showinfo(
-                "Model Required", 
-                "Vosk model not found. Please download the model from https://alphacephei.com/vosk/models\n"
-                "Download 'vosk-model-small-en-us-0.15' and extract to the application directory."
-            )
-            self.status = "Model missing"
-            self.update_status_display()
-            return
+        # Current directory
+        model_paths.append(model_name)
         
-        try:
-            self.model = Model(model_path)
-            self.status = "Ready"
-            self.update_status_display()
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to initialize Vosk model: {str(e)}")
-            self.status = "Error"
-            self.update_status_display()
+        # Executable directory if frozen
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+            model_paths.append(os.path.join(base_path, model_name))
+            
+            # Also check one level up
+            parent_path = os.path.dirname(base_path)
+            model_paths.append(os.path.join(parent_path, model_name))
+        
+        # Print all search paths for debugging
+        for path in model_paths:
+            print(f"Searching for model at: {os.path.abspath(path)}")
+            if os.path.exists(path) and os.path.isdir(path):
+                print(f"Found model directory at: {os.path.abspath(path)}")
+                try:
+                    # Try to load the model from this path
+                    self.model = Model(path)
+                    self.status = "Ready"
+                    self.update_status_display()
+                    return
+                except Exception as e:
+                    print(f"Error loading model from {path}: {str(e)}")
+        
+        # If we got here, model was not found or couldn't be loaded
+        messagebox.showinfo(
+            "Model Required", 
+            "Vosk model not found. Please download the model from https://alphacephei.com/vosk/models\n"
+            "Download 'vosk-model-small-en-us-0.15' and extract to the application directory."
+        )
+        self.status = "Model missing"
+        self.update_status_display()
     
     def update_status_display(self):
         self.status_label.config(text=f"Status: {self.status}")
@@ -176,4 +192,9 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
+    # Make sure we're in the correct directory when running as frozen executable
+    if getattr(sys, 'frozen', False):
+        # If the application is run as a bundle (compiled with PyInstaller)
+        application_path = os.path.dirname(sys.executable)
+        os.chdir(application_path)
     main()

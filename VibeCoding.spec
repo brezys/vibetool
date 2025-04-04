@@ -1,13 +1,21 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
+import os
 
 block_cipher = None
+
+# Collect all necessary files from vosk
+vosk_datas, vosk_binaries, vosk_hiddenimports = collect_all('vosk')
+
+# Define the model directory - it will be copied separately
+model_dir = os.path.abspath('vosk-model-small-en-us-0.15')
 
 a = Analysis(
     ['app.py'],
     pathex=[],
-    binaries=[],
-    datas=[('vosk-model-small-en-us-0.15', 'vosk-model-small-en-us-0.15')],
-    hiddenimports=[],
+    binaries=vosk_binaries,
+    datas=vosk_datas,  # Include vosk data files but handle model separately
+    hiddenimports=vosk_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -34,11 +42,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,
+    console=False,  # Set to False for normal use
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
     icon='VibeCoding.ico',
-)
+) 
